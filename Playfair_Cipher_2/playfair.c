@@ -1,183 +1,134 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
-void remove_duplicates(char *str) {
-    int len = strlen(str);
-    int index = 0;
-    for (int i = 0; i < len; i++) {
-        int j;
-        for (j = 0; j < index; j++) {
-            if (str[i] == str[j])
-                break;
+#define SIZE 5
+
+void createMatrix(char *key, char matrix[SIZE][SIZE]) {
+    int c[26] = {0}; // To track used letters
+    int x = 0;
+
+    for (int i = 0; key[i]; i++) {
+        char ch = tolower(key[i]);
+        if (ch == 'j') ch = 'i'; // Replace J with I
+        if (isalpha(ch) && !c[ch - 'a']) {
+            c[ch - 'a'] = 1;
+            matrix[x / SIZE][x % SIZE] = ch;
+            x++;
         }
-        if (j == index)
-            str[index++] = str[i];
     }
-    str[index] = '\0';
+
+    for (char ch = 'a'; ch <= 'z'; ch++) {
+        if (ch == 'j') continue; // Skip J
+        if (!c[ch - 'a']) {
+            matrix[x / SIZE][x % SIZE] = ch;
+            x++;
+        }
+    }
 }
 
-void fill_matrix(char *keyword, int matrix[5][5]) {
-    int used[26] = {0}; // Track used characters
+void findPosition(char ch, char matrix[SIZE][SIZE], int *row, int *col) {
+    if (ch == 'j') ch = 'i'; // Treat J as I
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (matrix[i][j] == ch) {
+                *row = i;
+                *col = j;
+                return;
+            }
+        }
+    }
+}
+
+void playfairEncrypt(char *plaintext, char matrix[SIZE][SIZE], char *ciphertext) {
+    int len = strlen(plaintext);
     int k = 0;
 
-    for (int i = 0; keyword[i]; i++) {
-        char ch = keyword[i];
-        if (ch == 'J')
-            ch = 'I'; // Treat 'J' as 'I'
-        if (!used[ch - 'A']) {
-            used[ch - 'A'] = 1;
-            matrix[k / 5][k % 5] = ch;
-            k++;
+    for (int i = 0; i < len; i += 2) {
+        char a = tolower(plaintext[i]);
+        char b = (i + 1 < len) ? tolower(plaintext[i + 1]) : 'x';
+
+        if (a == b) {
+            b = 'x'; // Insert 'x' if letters are the same
+            i--;
+        }
+
+        int rowA, colA, rowB, colB;
+        findPosition(a, matrix, &rowA, &colA);
+        findPosition(b, matrix, &rowB, &colB);
+
+        if (rowA == rowB) { // Same row
+            ciphertext[k++] = matrix[rowA][(colA + 1) % SIZE];
+            ciphertext[k++] = matrix[rowB][(colB + 1) % SIZE];
+        } else if (colA == colB) { // Same column
+            ciphertext[k++] = matrix[(rowA + 1) % SIZE][colA];
+            ciphertext[k++] = matrix[(rowB + 1) % SIZE][colB];
+        } else { // Rectangle
+            ciphertext[k++] = matrix[rowA][colB];
+            ciphertext[k++] = matrix[rowB][colA];
         }
     }
+    ciphertext[k] = '\0';
+}
 
-    for (char ch = 'A'; ch <= 'Z'; ch++) {
-        if (ch == 'J')
+void playfairDecrypt(char *ciphertext, char matrix[SIZE][SIZE], char *plaintext) {
+    int len = strlen(ciphertext);
+    int k = 0;
+
+    for (int i = 0; i < len; i += 2) {
+        char a = ciphertext[i];
+        char b = ciphertext[i + 1];
+
+        int rowA, colA, rowB, colB;
+        findPosition(a, matrix, &rowA, &colA);
+        findPosition(b, matrix, &rowB, &colB);
+
+        if (rowA == rowB) { // Same row
+            plaintext[k++] = matrix[rowA][(colA + 4) % SIZE];
+            plaintext[k++] = matrix[rowB][(colB + 4) % SIZE];
+        } else if (colA == colB) { // Same column
+            plaintext[k++] = matrix[(rowA + 4) % SIZE][colA];
+            plaintext[k++] = matrix[(rowB + 4) % SIZE][colB];
+        } else { // Rectangle
+            plaintext[k++] = matrix[rowA][colB];
+            plaintext[k++] = matrix[rowB][colA];
+        }
+    }
+    plaintext[k] = '\0';
+
+    // Remove 'x' if it was added as a filler
+    char finalText[100];
+    k = 0;
+    for (int i = 0; i < strlen(plaintext); i++) {
+        if (plaintext[i] == 'x' && (i == strlen(plaintext)-1 || plaintext[i - 1] == plaintext[i + 1])) {
             continue;
-        if (!used[ch - 'A']) {
-            matrix[k / 5][k % 5] = ch;
-            k++;
-        }
     }
-}
-
-void paircheck(char *plaintext) {
-    int len = strlen(plaintext);
-    // Convert all characters to uppercase
-    for (int i = 0; i < len; i++) {
-        plaintext[i] = toupper(plaintext[i]);
-        if (plaintext[i] == 'J')
-            plaintext[i] = 'I';
+        finalText[k++] = plaintext[i];
     }
-
-    // Check for pairs of identical characters and insert 'X'
-    for (int i = 0; i < len - 1; i++) {
-        if (plaintext[i] == plaintext[i + 1]) {
-            // Shift characters to the right to make space for 'X'
-            for (int j = len; j > i + 1; j--) {
-                plaintext[j + 1] = plaintext[j];
-            }
-            plaintext[i + 1] = 'X';
-            len++;
-        }
-    }
-
-    // Add 'X' if the plaintext length is odd
-    if (len % 2 != 0) {
-        plaintext[len] = 'X';
-        plaintext[len + 1] = '\0';
-    } else {
-        plaintext[len] = '\0';
-    }
-}
-
-void encrypt(char a, char b, int matrix[5][5], char *ciphertext, int cipher_index) {
-    int row1, col1, row2, col2;
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            if (matrix[i][j] == a) {
-                row1 = i;
-                col1 = j;
-            }
-            if (matrix[i][j] == b) {
-                row2 = i;
-                col2 = j;
-            }
-        }
-    }
-
-    if (row1 == row2) {
-        // Move right in the same row
-        ciphertext[cipher_index] = matrix[row1][(col1 + 1) % 5];
-        ciphertext[cipher_index + 1] = matrix[row2][(col2 + 1) % 5];
-    } else if (col1 == col2) {
-        // Move down in the same column
-        ciphertext[cipher_index] = matrix[(row1 + 1) % 5][col1];
-        ciphertext[cipher_index + 1] = matrix[(row2 + 1) % 5][col2];
-    } else {
-        // Rectangle case: swap columns
-        ciphertext[cipher_index] = matrix[row1][col2];
-        ciphertext[cipher_index + 1] = matrix[row2][col1];
-    }
-}
-
-void decrypt(char a, char b, int matrix[5][5], char *plaintext, int plain_index) {
-    int row1, col1, row2, col2;
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            if (matrix[i][j] == a) {
-                row1 = i;
-                col1 = j;
-            }
-            if (matrix[i][j] == b) {
-                row2 = i;
-                col2 = j;
-            }
-        }
-    }
-
-    if (row1 == row2) {
-        // Move left in the same row
-        plaintext[plain_index] = matrix[row1][(col1 + 4) % 5];
-        plaintext[plain_index + 1] = matrix[row2][(col2 + 4) % 5];
-    } else if (col1 == col2) {
-        // Move up in the same column
-        plaintext[plain_index] = matrix[(row1 + 4) % 5][col1];
-        plaintext[plain_index + 1] = matrix[(row2 + 4) % 5][col2];
-    } else {
-        // Rectangle case: swap columns
-        plaintext[plain_index] = matrix[row1][col2];
-        plaintext[plain_index + 1] = matrix[row2][col1];
-    }
+    finalText[k] = '\0';
+    strcpy(plaintext, finalText);
 }
 
 int main() {
-    char keyword[100], plaintext[100], ciphertext[100], decryptedtext[100];
-    int matrix[5][5];
+    char key[100], plaintext[100], ciphertext[100];
+    char matrix[SIZE][SIZE];
 
-    // Take input of keyword and plaintext
-    printf("Enter keyword: ");
-    scanf("%s", keyword);
-    printf("Enter Plaintext: ");
-    scanf("%s", plaintext);
+    printf("Enter the key: ");
+    fgets(key, sizeof(key), stdin);
+    key[strcspn(key, "\n")] = 0; // Remove newline character
 
-    // Remove duplicates and process keyword
-    remove_duplicates(keyword);
-    for (int i = 0; keyword[i]; i++)
-        keyword[i] = toupper(keyword[i]);
+    printf("Enter the plain text: ");
+    fgets(plaintext, sizeof(plaintext), stdin);
+    plaintext[strcspn(plaintext, "\n")] = 0; // Remove newline character
 
-    // Fill matrix
-    fill_matrix(keyword, matrix);
+    createMatrix(key, matrix);
+    playfairEncrypt(plaintext, matrix, ciphertext);
+    printf("Encrypted text: %s\n", ciphertext);
 
-    // Process plaintext
-    paircheck(plaintext);
-    int len = strlen(plaintext);
-
-    // Encrypt plaintext
-    int cipher_index = 0;
-    for (int i = 0; i < len; i += 2) {
-        encrypt(plaintext[i], plaintext[i + 1], matrix, ciphertext, cipher_index);
-        cipher_index += 2;
-    }
-    ciphertext[cipher_index] = '\0';
-
-    // Print ciphertext
-    printf("Ciphertext: %s\n", ciphertext);
-
-    // Decrypt ciphertext
-    int plain_index = 0;
-    for (int i = 0; i < cipher_index; i += 2) {
-        decrypt(ciphertext[i], ciphertext[i + 1], matrix, decryptedtext, plain_index);
-        plain_index += 2;
-    }
-    decryptedtext[plain_index] = '\0';
-
-    // Print decrypted text
+    char decryptedtext[100];
+    playfairDecrypt(ciphertext, matrix, decryptedtext);
     printf("Decrypted text: %s\n", decryptedtext);
-
-    
 
     return 0;
 }

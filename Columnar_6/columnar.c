@@ -19,7 +19,7 @@ void encrypt(char *message, char *key, char *cipherText) {
                 matrix[i][j] = 'X'; // Padding character if message is shorter than the matrix
         }
     }
-
+    
     // Sorting the key to determine the order of columns
     int sortedKey[keyLen];
     for (int i = 0; i < keyLen; i++) {
@@ -46,6 +46,7 @@ void encrypt(char *message, char *key, char *cipherText) {
         }
     }
     cipherText[k] = '\0';
+    
 }
 
 void decrypt(char *cipherText, char *key, char *decryptedText, int originalLen) {

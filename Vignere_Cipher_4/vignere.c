@@ -13,7 +13,7 @@ int main(){
     // Encrypt
     int key_index=0;
     for(int i=0 ; i<strlen(plaintext) ; i++){
-        ciphertext[i] = (plaintext[i]-'a' + key[key_index] - 'a') + 'a';
+        ciphertext[i] = (plaintext[i] - 'a' + key[key_index] - 'a') + 'a';
         if(key_index < strlen(key)){
             key_index++;
         }

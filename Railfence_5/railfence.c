@@ -10,7 +10,6 @@ int main() {
 
     printf("Enter message: ");
     fgets(msg, sizeof(msg), stdin);
-
     // Remove the newline character if present
     msg[strcspn(msg, "\n")] = 0;
 
